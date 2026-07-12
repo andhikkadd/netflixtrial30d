@@ -320,7 +320,7 @@ async function run() {
 
       let flowSuccess = false;
       
-      for (let step = 1; step <= 4; step++) {
+      for (let step = 1; step <= 8; step++) {
         console.log(`⚡ Memproses langkah verifikasi ke-${step}...`);
         
         // Tunggu salah satu dari keempat selector muncul (max 15 detik)

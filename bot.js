@@ -882,7 +882,7 @@ async function handleTrialFlow(ctx, emailAddress) {
 
     let flowSuccess = false;
 
-    for (let step = 1; step <= 4; step++) {
+    for (let step = 1; step <= 8; step++) {
       await updateStatus(90);
 
       // Cek status halaman saat ini di awal step
