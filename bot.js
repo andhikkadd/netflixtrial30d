@@ -191,18 +191,12 @@ Bot buat akun Netflix Premium 30 Hari instan pake email kamu sendiri! Bebas doma
 💳 *SALDO KAMU:*
 • Saldo Kredit: \`${user.credits} CR\` (1 CR = 1 Akun)
 • ID Telegram: \`${ctx.from.id}\`
-
-🛒 *BELI VOUCHER SALDO (24/7):*
-Kamu bisa beli kode voucher otomatis melalui Bot Auto-Order kami di:
-👉 @tuntungpedia\\_bot
-
-👇 *Pilih menu di bawah ini:*
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 `;
   ctx.replyWithMarkdown(welcomeMessage, Markup.keyboard([
     ['🎬 Buat Akun Netflix'],
     ['🔑 Redeem Voucher', '🪙 Cek Kredit'],
-    ['ℹ️ Bantuan']
+    ['🛒 Beli Kredit', 'ℹ️ Bantuan']
   ]).resize());
 });
 
@@ -217,7 +211,7 @@ bot.hears('🎬 Buat Akun Netflix', (ctx) => {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 Saldo kamu saat ini \`0 CR\`. 
 
-Kamu bisa beli kode voucher otomatis 24/7 melalui Bot Auto-Order kami di:
+Kamu bisa membeli kredit secara otomatis 24/7 melalui Bot Auto-Order kami di:
 👉 @tuntungpedia\\_bot
 
 Setelah mendapat kode voucher, masukkan di menu *🔑 Redeem Voucher* ya!
@@ -229,7 +223,7 @@ Setelah mendapat kode voucher, masukkan di menu *🔑 Redeem Voucher* ya!
   ctx.replyWithMarkdown(`
 🎬 *BUAT AKUN NETFLIX*
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
-Kirim email kamu di sini ya:
+Kirimlkan email kamu di sini ya:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 `);
@@ -259,16 +253,30 @@ bot.hears('🪙 Cek Kredit', (ctx) => {
 `);
 });
 
+bot.hears('🛒 Beli Kredit', (ctx) => {
+  ctx.replyWithMarkdown(`
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+🛒 *BELI KREDIT (24/7)*
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+Kamu bisa membeli kredit secara otomatis 24/7 melalui Bot Auto-Order kami di:
+👉 @tuntungpedia\\_bot
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+`);
+});
+
 bot.hears('ℹ️ Bantuan', (ctx) => {
   ctx.replyWithMarkdown(`
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 ℹ️ *PANDUAN BOT*
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
-*1. Cara Isi Saldo / Kredit*
-Beli voucher otomatis 24/7 di @tuntungpedia\\_bot, lalu klik menu *🔑 Redeem Voucher* dan kirim kode voucher kamu.
+*1. Cara Beli Kredit*
+Klik menu *🛒 Beli Kredit*, silakan beli lewat Bot Auto-Order kami, lalu kembali ke bot ini untuk redeem kodenya.
 
-*2. Cara Buat Akun Netflix*
-Pastikan kamu punya minimal \`1 CR\`. Klik menu *🎬 Buat Akun Netflix*, kirim email kamu, lalu tunggu bot selesai memproses. Setelah sukses, cek inbox email kamu untuk menyelesaikan pendaftaran!
+*2. Cara Redeem Kode*
+Klik menu *🔑 Redeem Voucher* dan kirim kode voucher yang sudah Anda beli.
+
+*3. Cara Buat Akun Netflix*
+Pastikan kamu punya minimal \`1 CR\`. Klik menu *🎬 Buat Akun Netflix*, kirim email kamu, lalu tunggu bot selesai memproses.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 `);
 });
@@ -279,7 +287,7 @@ bot.command(['help', 'bantuan'], (ctx) => {
 ℹ️  *PANDUAN BANTUAN & SUPPORT*  ℹ️
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 *1. Bagaimana cara membeli kredit?*
-Anda bisa membeli voucher secara otomatis 24/7 melalui Bot Auto-Order di:
+Anda bisa membeli kredit secara otomatis 24/7 melalui Bot Auto-Order di:
 👉 @tuntungpedia\\_bot
 
 *2. Bagaimana cara redeem kode?*
