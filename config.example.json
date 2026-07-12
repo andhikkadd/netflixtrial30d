@@ -2,5 +2,10 @@
   "botToken": "PASTE_YOUR_BOT_TOKEN_HERE",
   "adminId": 123456789,
   "defaultTmailHost": "",
-  "headless": true
+  "headless": true,
+  "proxy": {
+    "server": "http://ip_atau_domain:port",
+    "username": "opsional_username_jika_ada",
+    "password": "opsional_password_jika_ada"
+  }
 }

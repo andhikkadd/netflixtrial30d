@@ -577,18 +577,32 @@ async function handleTrialFlow(ctx, emailAddress) {
       ];
     }
 
+    const launchOptions = {
+      headless: isHeadless,
+      args: launchArgs
+    };
+
+    if (config.proxy) {
+      if (typeof config.proxy === 'string' && config.proxy.trim() !== '') {
+        launchOptions.proxy = { server: config.proxy.trim() };
+      } else if (typeof config.proxy === 'object' && config.proxy.server) {
+        launchOptions.proxy = {
+          server: config.proxy.server,
+          username: config.proxy.username || undefined,
+          password: config.proxy.password || undefined
+        };
+      }
+      console.log(`🌐 Menggunakan proxy untuk browser: ${launchOptions.proxy.server}`);
+    }
+
     try {
       browser = await chromium.launch({
-        headless: isHeadless,
         channel: 'chrome',
-        args: launchArgs
+        ...launchOptions
       });
     } catch (chromeError) {
       console.log('⚠️ Google Chrome tidak ditemukan. Menggunakan Chromium bawaan...');
-      browser = await chromium.launch({
-        headless: isHeadless,
-        args: launchArgs
-      });
+      browser = await chromium.launch(launchOptions);
     }
 
     const contextOptions = {
