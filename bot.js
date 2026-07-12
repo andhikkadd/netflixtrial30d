@@ -194,7 +194,7 @@ Bot buat akun Netflix Premium 30 Hari instan pake email kamu sendiri! Bebas doma
 
 🛒 *BELI VOUCHER SALDO (24/7):*
 Kamu bisa beli kode voucher otomatis melalui Bot Auto-Order kami di:
-👉 @tuntungpedia_bot
+👉 @tuntungpedia\_bot
 
 👇 *Pilih menu di bawah ini:*
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -218,7 +218,7 @@ bot.hears('🎬 Buat Akun Netflix', (ctx) => {
 Saldo kamu saat ini \`0 CR\`. 
 
 Kamu bisa beli kode voucher otomatis 24/7 melalui Bot Auto-Order kami di:
-👉 @tuntungpedia_bot
+👉 @tuntungpedia\_bot
 
 Setelah mendapat kode voucher, masukkan di menu *🔑 Redeem Voucher* ya!
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -265,7 +265,7 @@ bot.hears('ℹ️ Bantuan', (ctx) => {
 ℹ️ *PANDUAN BOT*
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 *1. Cara Isi Saldo / Kredit*
-Beli voucher otomatis 24/7 di @tuntungpedia_bot, lalu klik menu *🔑 Redeem Voucher* dan kirim kode voucher kamu.
+Beli voucher otomatis 24/7 di @tuntungpedia\_bot, lalu klik menu *🔑 Redeem Voucher* dan kirim kode voucher kamu.
 
 *2. Cara Buat Akun Netflix*
 Pastikan kamu punya minimal \`1 CR\`. Klik menu *🎬 Buat Akun Netflix*, kirim email kamu, lalu tunggu bot selesai memproses. Setelah sukses, cek inbox email kamu untuk menyelesaikan pendaftaran!
@@ -280,7 +280,7 @@ bot.command(['help', 'bantuan'], (ctx) => {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 *1. Bagaimana cara membeli kredit?*
 Anda bisa membeli voucher secara otomatis 24/7 melalui Bot Auto-Order di:
-👉 @tuntungpedia_bot
+👉 @tuntungpedia\_bot
 
 *2. Bagaimana cara redeem kode?*
 Ketik perintah berikut:
