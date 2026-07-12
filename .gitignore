@@ -1,0 +1,20 @@
+# Dependency directory
+node_modules/
+
+# Sensitive configuration files
+config.json
+cookies.json
+.agents/
+
+# SQLite Database files
+*.db
+*.db-journal
+*.db-wal
+
+# Backup and temp files
+*.bak
+*.tmp
+credits.json
+
+# Log files
+*.log
