@@ -355,19 +355,32 @@ async function run() {
       for (let step = 1; step <= 8; step++) {
         console.log(`⚡ Memproses langkah verifikasi ke-${step}...`);
         
+        // Deteksi dini pemblokiran atau pengalihan login (bilingual)
+        const currentUrl = page.url();
+        const bodyText = await page.locator('body').innerText().catch(() => '');
+        if (
+          currentUrl.includes('/login') ||
+          bodyText.includes('Something went wrong') ||
+          bodyText.includes('try again in a few minutes') ||
+          bodyText.includes('Terjadi kesalahan') ||
+          bodyText.includes('Coba lagi dalam beberapa menit') ||
+          bodyText.includes('Masukkan infomu untuk masuk') ||
+          bodyText.includes('Sign in to your account') ||
+          bodyText.includes('Masuk untuk mengakses akun')
+        ) {
+          throw new Error('Terdeteksi bot / IP diblokir oleh Netflix (Something went wrong / dialihkan ke login).');
+        }
+
         // Tunggu salah satu dari keempat selector muncul (max 15 detik)
         const matchedSelector = await Promise.race([
           page.waitForSelector(reEnterEmailSelector, { timeout: 15000 }).then(() => 're_enter').catch(() => new Promise(() => {})),
           page.waitForSelector(sendLinkSelector, { timeout: 15000 }).then(() => 'send_link').catch(() => new Promise(() => {})),
           page.waitForSelector(continueBtnSelector, { timeout: 15000 }).then(() => 'continue_only').catch(() => new Promise(() => {})),
-          page.waitForSelector(successSelector, { timeout: 15000 }).then(() => 'success').catch(() => new Promise(() => {})),
+          page.waitForSelector(successSelector, { timeout: 15000 }).then(() => 'success'),
           page.waitForTimeout(15000).then(() => 'timeout')
         ]);
 
         console.log(`📍 Deteksi tipe halaman: ${matchedSelector}`);
-
-        // Pengaman: Periksa innerText body halaman untuk memastikan apakah sudah sukses
-        const bodyText = await page.locator('body').innerText().catch(() => '');
         if (bodyText.includes('Ketuk link dalam email') || bodyText.includes('Check your email') || bodyText.includes('link untuk membuat akunmu')) {
           console.log('\n==================================================');
           console.log('🎉 BERHASIL!');

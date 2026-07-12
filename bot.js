@@ -895,13 +895,18 @@ async function handleTrialFlow(ctx, emailAddress) {
 
       // Cek status halaman saat ini di awal step
       const stepUrl = page.url();
-      if (stepUrl.includes('/login')) {
-        throw new Error('Email sudah terdaftar (dialihkan ke login) ATAU IP server diblokir oleh Netflix.');
-      }
-
       const bodyText = await page.locator('body').innerText().catch(() => '');
-      if (bodyText.includes('Something went wrong') || bodyText.includes('try again in a few minutes')) {
-        throw new Error('Terdeteksi bot/IP server diblokir oleh Netflix (Something went wrong).');
+      if (
+        stepUrl.includes('/login') ||
+        bodyText.includes('Something went wrong') ||
+        bodyText.includes('try again in a few minutes') ||
+        bodyText.includes('Terjadi kesalahan') ||
+        bodyText.includes('Coba lagi dalam beberapa menit') ||
+        bodyText.includes('Masukkan infomu untuk masuk') ||
+        bodyText.includes('Sign in to your account') ||
+        bodyText.includes('Masuk untuk mengakses akun')
+      ) {
+        throw new Error('Terdeteksi bot/IP server diblokir oleh Netflix (Something went wrong / dialihkan ke login).');
       }
 
       // Tunggu salah satu dari keempat selector muncul (max 15 detik)
