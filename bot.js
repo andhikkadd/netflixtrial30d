@@ -586,13 +586,20 @@ async function handleTrialFlow(ctx, emailAddress) {
       if (typeof config.proxy === 'string' && config.proxy.trim() !== '') {
         launchOptions.proxy = { server: config.proxy.trim() };
       } else if (typeof config.proxy === 'object' && config.proxy.server) {
+        // Hasilkan session ID acak agar setiap run mendapatkan IP Proxy baru dari pool
+        const randomSessionId = Math.floor(Math.random() * 1000000);
+        const baseUsername = config.proxy.username || '';
+        const finalUsername = baseUsername && !baseUsername.includes('-session-')
+          ? `${baseUsername}-session-${randomSessionId}`
+          : baseUsername;
+
         launchOptions.proxy = {
           server: config.proxy.server,
-          username: config.proxy.username || undefined,
+          username: finalUsername,
           password: config.proxy.password || undefined
         };
       }
-      console.log(`🌐 Menggunakan proxy untuk browser: ${launchOptions.proxy.server}`);
+      console.log(`🌐 Menggunakan proxy untuk browser: ${launchOptions.proxy.server} (Session: ${launchOptions.proxy.username || 'default'})`);
     }
 
     try {
