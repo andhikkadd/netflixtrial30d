@@ -192,6 +192,10 @@ Bot buat akun Netflix Premium 30 Hari instan pake email kamu sendiri! Bebas doma
 • Saldo Kredit: \`${user.credits} CR\` (1 CR = 1 Akun)
 • ID Telegram: \`${ctx.from.id}\`
 
+🛒 *BELI VOUCHER SALDO (24/7):*
+Kamu bisa beli kode voucher otomatis melalui Bot Auto-Order kami di:
+👉 @tuntungpedia_bot
+
 👇 *Pilih menu di bawah ini:*
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 `;
@@ -213,7 +217,10 @@ bot.hears('🎬 Buat Akun Netflix', (ctx) => {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 Saldo kamu saat ini \`0 CR\`. 
 
-Silakan beli voucher dulu ke admin, terus redeem kodenya di menu *🔑 Redeem Voucher* ya!
+Kamu bisa beli kode voucher otomatis 24/7 melalui Bot Auto-Order kami di:
+👉 @tuntungpedia_bot
+
+Setelah mendapat kode voucher, masukkan di menu *🔑 Redeem Voucher* ya!
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 `);
   }
@@ -258,7 +265,7 @@ bot.hears('ℹ️ Bantuan', (ctx) => {
 ℹ️ *PANDUAN BOT*
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 *1. Cara Isi Saldo / Kredit*
-Beli voucher dari admin, lalu klik menu *🔑 Redeem Voucher* dan kirim kode voucher kamu.
+Beli voucher otomatis 24/7 di @tuntungpedia_bot, lalu klik menu *🔑 Redeem Voucher* dan kirim kode voucher kamu.
 
 *2. Cara Buat Akun Netflix*
 Pastikan kamu punya minimal \`1 CR\`. Klik menu *🎬 Buat Akun Netflix*, kirim email kamu, lalu tunggu bot selesai memproses. Setelah sukses, cek inbox email kamu untuk menyelesaikan pendaftaran!
@@ -272,7 +279,8 @@ bot.command(['help', 'bantuan'], (ctx) => {
 ℹ️  *PANDUAN BANTUAN & SUPPORT*  ℹ️
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 *1. Bagaimana cara membeli kredit?*
-Hubungi admin untuk melakukan pembayaran. Admin akan memberikan kode voucher berupa format \`NF-XXXXX-XXXXX\`.
+Anda bisa membeli voucher secara otomatis 24/7 melalui Bot Auto-Order di:
+👉 @tuntungpedia_bot
 
 *2. Bagaimana cara redeem kode?*
 Ketik perintah berikut:
@@ -282,8 +290,8 @@ Ketik perintah berikut:
 Pastikan saldo Anda minimal \`1 CR\`. Ketik perintah berikut:
 \`\`/trial emailanda@domain.com\`\`
 
-*Kontak Admin/Support:*
-💬 Hubungi: @${ctx.from.username || 'Admin'} (atau silakan chat Admin secara langsung)
+*Kontak Support:*
+💬 Hubungi Admin jika Anda mengalami kendala teknis.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 `);
 });
