@@ -898,10 +898,10 @@ async function handleTrialFlow(ctx, emailAddress) {
 
       // Tunggu salah satu dari keempat selector muncul (max 15 detik)
       const matchedSelector = await Promise.race([
-        page.waitForSelector(reEnterEmailSelector, { timeout: 15000 }).then(() => 're_enter'),
-        page.waitForSelector(sendLinkSelector, { timeout: 15000 }).then(() => 'send_link'),
-        page.waitForSelector(continueBtnSelector, { timeout: 15000 }).then(() => 'continue_only'),
-        page.waitForSelector(successSelector, { timeout: 15000 }).then(() => 'success'),
+        page.waitForSelector(reEnterEmailSelector, { timeout: 15000 }).then(() => 're_enter').catch(() => new Promise(() => {})),
+        page.waitForSelector(sendLinkSelector, { timeout: 15000 }).then(() => 'send_link').catch(() => new Promise(() => {})),
+        page.waitForSelector(continueBtnSelector, { timeout: 15000 }).then(() => 'continue_only').catch(() => new Promise(() => {})),
+        page.waitForSelector(successSelector, { timeout: 15000 }).then(() => 'success').catch(() => new Promise(() => {})),
         page.waitForTimeout(15000).then(() => 'timeout')
       ]);
 
