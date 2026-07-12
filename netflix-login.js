@@ -228,7 +228,7 @@ async function run() {
 
       // Tunggu selector muncul max 8 detik
       await page.waitForSelector(emailSelector, { timeout: 8000 });
-      const emailInput = page.locator(emailSelector).first();
+      const emailInput = page.locator(emailSelector).filter({ visible: true }).first();
 
       console.log(`✍ Mengisi email secara otomatis (typing simulation): ${emailAddress}`);
       let typedSuccessfully = false;
@@ -279,7 +279,7 @@ async function run() {
       if (currentUrl.includes('netflix.com') && !currentUrl.includes('/signup') && !currentUrl.includes('/login')) {
         console.log('🖱 Menekan ENTER tidak memicu navigasi. Mencoba mengeklik tombol "Coba 30 Hari seharga Rp0" secara langsung...');
         const submitButtonSelector = 'form button[type="submit"], button:has-text("Get Started"), button:has-text("Mulai"), button:has-text("Coba 30 Hari seharga Rp0")';
-        const submitButton = page.locator(submitButtonSelector).first();
+        const submitButton = page.locator(submitButtonSelector).filter({ visible: true }).first();
         if (await submitButton.isVisible()) {
           await submitButton.hover();
           await page.waitForTimeout(200);
@@ -325,10 +325,10 @@ async function run() {
         
         // Tunggu salah satu dari keempat selector muncul (max 15 detik)
         const matchedSelector = await Promise.race([
-          page.waitForSelector(reEnterEmailSelector, { timeout: 15000 }).then(() => 're_enter'),
-          page.waitForSelector(sendLinkSelector, { timeout: 15000 }).then(() => 'send_link'),
-          page.waitForSelector(continueBtnSelector, { timeout: 15000 }).then(() => 'continue_only'),
-          page.waitForSelector(successSelector, { timeout: 15000 }).then(() => 'success'),
+          page.waitForSelector(reEnterEmailSelector, { timeout: 15000 }).then(() => 're_enter').catch(() => new Promise(() => {})),
+          page.waitForSelector(sendLinkSelector, { timeout: 15000 }).then(() => 'send_link').catch(() => new Promise(() => {})),
+          page.waitForSelector(continueBtnSelector, { timeout: 15000 }).then(() => 'continue_only').catch(() => new Promise(() => {})),
+          page.waitForSelector(successSelector, { timeout: 15000 }).then(() => 'success').catch(() => new Promise(() => {})),
           page.waitForTimeout(15000).then(() => 'timeout')
         ]);
 

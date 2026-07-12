@@ -788,7 +788,7 @@ async function handleTrialFlow(ctx, emailAddress) {
     await page.waitForSelector(emailSelector, { timeout: 8000 });
 
     // Isi Email secara Human-Like (Ketik satu per satu karakter)
-    const emailInput = page.locator(emailSelector).first();
+    const emailInput = page.locator(emailSelector).filter({ visible: true }).first();
     let typedSuccessfully = false;
     for (let attempt = 1; attempt <= 5; attempt++) {
       await emailInput.focus();
@@ -838,7 +838,7 @@ async function handleTrialFlow(ctx, emailAddress) {
     const currentUrl = page.url();
     if (currentUrl.includes('netflix.com') && !currentUrl.includes('/signup') && !currentUrl.includes('/login')) {
       const submitButtonSelector = 'form button[type="submit"], button:has-text("Get Started"), button:has-text("Mulai"), button:has-text("Coba 30 Hari seharga Rp0")';
-      const submitButton = page.locator(submitButtonSelector).first();
+      const submitButton = page.locator(submitButtonSelector).filter({ visible: true }).first();
       if (await submitButton.isVisible()) {
         await submitButton.hover();
         await page.waitForTimeout(200);
