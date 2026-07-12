@@ -67,7 +67,7 @@ function getSetting(key) {
 
 function setSetting(key, value) {
   try {
-    db.prepare('INSERT INTO settings (key, value) ON CONFLICT(key) DO UPDATE SET value = ?').run(key, value.toString(), value.toString());
+    db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = ?').run(key, value.toString(), value.toString());
   } catch (err) {
     console.error('Gagal menyimpan setting:', err);
   }
