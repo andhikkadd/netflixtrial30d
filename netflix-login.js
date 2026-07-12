@@ -6,6 +6,17 @@ const { chromium } = require('playwright');
 // File cookies.json & credits.json harus ada di folder yang sama
 const COOKIES_FILE = path.join(__dirname, 'cookies.json');
 const CREDITS_FILE = path.join(__dirname, 'credits.json');
+const CONFIG_FILE = path.join(__dirname, 'config.json');
+
+// Baca config.json untuk mengambil pengaturan proxy & headless jika ada
+let config = {};
+if (fs.existsSync(CONFIG_FILE)) {
+  try {
+    config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
+  } catch (err) {
+    console.error('⚠️ Gagal membaca config.json:', err.message);
+  }
+}
 
 // Fungsi pembantu untuk meminta input dari terminal
 function askQuestion(query) {
@@ -94,11 +105,26 @@ async function run() {
 
   try {
     // 4. Launch browser Google Chrome lokal
-    const browser = await chromium.launch({
+    const launchOptions = {
       headless: false,
       channel: 'chrome',
       args: ['--start-maximized', '--disable-blink-features=AutomationControlled']
-    });
+    };
+
+    if (config.proxy) {
+      if (typeof config.proxy === 'string' && config.proxy.trim() !== '') {
+        launchOptions.proxy = { server: config.proxy.trim() };
+      } else if (typeof config.proxy === 'object' && config.proxy.server) {
+        launchOptions.proxy = {
+          server: config.proxy.server,
+          username: config.proxy.username || undefined,
+          password: config.proxy.password || undefined
+        };
+      }
+      console.log(`🌐 Menggunakan proxy untuk browser: ${launchOptions.proxy.server}`);
+    }
+
+    const browser = await chromium.launch(launchOptions);
 
     const context = await browser.newContext({
       viewport: null,
