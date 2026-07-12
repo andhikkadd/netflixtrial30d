@@ -289,9 +289,9 @@ async function run() {
 
       console.log('⌨ Mengirimkan form dengan menekan ENTER...');
       await page.keyboard.press('Enter');
-
-      // Tunggu 3 detik untuk membiarkan halaman merespons / redirect
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(800);
+      await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+      await page.waitForTimeout(2000);
 
       // Cek apakah ada banner error merah dari Netflix (indikasi cookies limit / diblokir)
       const errorBannerSelector = '.ui-message-error, [data-uia="text"], .message-container';
@@ -316,7 +316,9 @@ async function run() {
           await submitButton.hover();
           await page.waitForTimeout(200);
           await submitButton.click();
-          await page.waitForTimeout(3000);
+          await page.waitForTimeout(800);
+          await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+          await page.waitForTimeout(2000);
 
           // Cek kembali error banner setelah klik tombol fisik
           const countAfterClick = await errorElements.count();
@@ -425,7 +427,8 @@ async function run() {
           await btn.hover();
           await page.waitForTimeout(200);
           await btn.click();
-          await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+          await page.waitForTimeout(800);
+          await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
           await page.waitForTimeout(2000);
         }
         else if (matchedSelector === 'continue_only') {
@@ -435,7 +438,8 @@ async function run() {
           await btn.hover();
           await page.waitForTimeout(200);
           await btn.click();
-          await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+          await page.waitForTimeout(800);
+          await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
           await page.waitForTimeout(2000);
         }
         else if (matchedSelector === 'send_link') {
@@ -445,7 +449,8 @@ async function run() {
           await sendLinkBtn.hover();
           await page.waitForTimeout(500);
           await sendLinkBtn.click();
-          await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+          await page.waitForTimeout(800);
+          await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
           await page.waitForTimeout(2000);
 
           console.log('\n==================================================');
@@ -467,8 +472,12 @@ async function run() {
       }
 
     } catch (formError) {
-      console.log(`\n❌ Gagal: ${formError.message}`);
-      console.log('Kemungkinan cookies trial tidak aktif / diblokir, atau UI Netflix berbeda.\n');
+      console.log(`\n❌ Pendaftaran Gagal! Terjadi kendala teknis saat memproses pendaftaran Anda.`);
+      
+      // Kembalikan kredit jika gagal
+      currentCredits += 1;
+      saveCredits(currentCredits);
+      console.log(`🪙 1 Kredit dikembalikan karena pendaftaran gagal! Saldo Anda saat ini: ${currentCredits}\n`);
     }
 
     // Menjaga agar browser tetap terbuka

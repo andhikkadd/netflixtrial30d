@@ -822,9 +822,9 @@ async function handleTrialFlow(ctx, emailAddress) {
     // Kirim Form dengan menekan ENTER (lebih aman dari deteksi click bot)
     await updateStatus(85);
     await page.keyboard.press('Enter');
-
-    // Tunggu 3 detik untuk membiarkan halaman merespons / redirect
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(800);
+    await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+    await page.waitForTimeout(2000);
 
     // Deteksi dini pemblokiran IP atau pengalihan ke halaman Login
     const earlyUrl = page.url();
@@ -851,7 +851,9 @@ async function handleTrialFlow(ctx, emailAddress) {
         await submitButton.hover();
         await page.waitForTimeout(200);
         await submitButton.click();
-        await page.waitForTimeout(3000);
+        await page.waitForTimeout(800);
+        await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+        await page.waitForTimeout(2000);
 
         // Cek kembali setelah klik tombol fisik
         const checkUrlPostClick = page.url();
@@ -952,7 +954,8 @@ async function handleTrialFlow(ctx, emailAddress) {
         await btn.hover();
         await page.waitForTimeout(200);
         await btn.click();
-        await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+        await page.waitForTimeout(800);
+        await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
         await page.waitForTimeout(2000);
       }
       else if (matchedSelector === 'continue_only') {
@@ -961,7 +964,8 @@ async function handleTrialFlow(ctx, emailAddress) {
         await btn.hover();
         await page.waitForTimeout(200);
         await btn.click();
-        await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+        await page.waitForTimeout(800);
+        await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
         await page.waitForTimeout(2000);
       }
       else if (matchedSelector === 'send_link') {
@@ -970,7 +974,8 @@ async function handleTrialFlow(ctx, emailAddress) {
         await sendLinkBtn.hover();
         await page.waitForTimeout(500);
         await sendLinkBtn.click();
-        await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+        await page.waitForTimeout(800);
+        await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
         await page.waitForTimeout(2000);
         flowSuccess = true;
         break;
