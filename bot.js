@@ -746,8 +746,8 @@ async function handleTrialFlow(ctx, emailAddress) {
 
     // Clear Cookies
     await updateStatus(45);
-    await page.goto('https://www.netflix.com/clearcookies', { waitUntil: 'commit' });
-    await page.waitForTimeout(2000);
+    await page.goto('https://www.netflix.com/clearcookies', { waitUntil: 'load', timeout: 30000 }).catch(() => {});
+    await page.waitForTimeout(3000);
 
     // Injeksi Cookies
     await updateStatus(60);
@@ -781,7 +781,8 @@ async function handleTrialFlow(ctx, emailAddress) {
 
     // Buka Halaman Utama
     await updateStatus(75);
-    await page.goto('https://www.netflix.com', { waitUntil: 'commit' });
+    await page.goto('https://www.netflix.com', { waitUntil: 'load', timeout: 30000 }).catch(() => {});
+    await page.waitForTimeout(4000); // Tunggu 4 detik agar React render selesai sepenuhnya
 
     // Cari Input Email
     const emailSelector = 'input[type="email"], input[name="email"], #id_email_hero_fuji';

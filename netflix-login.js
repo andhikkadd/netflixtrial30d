@@ -201,10 +201,8 @@ async function run() {
 
     // 5. Masuk ke netflix.com/clearcookies untuk membersihkan session cookies
     console.log('🧹 Membersihkan session via netflix.com/clearcookies...');
-    await page.goto('https://www.netflix.com/clearcookies', { waitUntil: 'commit' });
-
-    // Tunggu 2 detik untuk memastikan proses pembersihan selesai di sisi server
-    await page.waitForTimeout(2000);
+    await page.goto('https://www.netflix.com/clearcookies', { waitUntil: 'load', timeout: 30000 }).catch(() => {});
+    await page.waitForTimeout(3000);
 
     // 6. Inject cookies ke context browser
     console.log('🔑 Menginjeksikan cookies trial Anda...');
@@ -245,7 +243,8 @@ async function run() {
 
     // 7. Buka halaman utama Netflix
     console.log('🌐 Menavigasi ke halaman utama Netflix...');
-    await page.goto('https://www.netflix.com', { waitUntil: 'commit' });
+    await page.goto('https://www.netflix.com', { waitUntil: 'load', timeout: 30000 }).catch(() => {});
+    await page.waitForTimeout(4000); // Tunggu 4 detik agar React render selesai sepenuhnya
 
     // 8. Tunggu form email muncul dan isi otomatis
     try {
