@@ -939,7 +939,8 @@ async function handleTrialFlow(ctx, emailAddress) {
         await btn.hover();
         await page.waitForTimeout(200);
         await btn.click();
-        await page.waitForTimeout(3000);
+        await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+        await page.waitForTimeout(2000);
       }
       else if (matchedSelector === 'continue_only') {
         // Klik Lanjutkan (Tinjau untuk melanjutkan)
@@ -947,7 +948,8 @@ async function handleTrialFlow(ctx, emailAddress) {
         await btn.hover();
         await page.waitForTimeout(200);
         await btn.click();
-        await page.waitForTimeout(3000);
+        await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+        await page.waitForTimeout(2000);
       }
       else if (matchedSelector === 'send_link') {
         // Halaman akhir: Kirim Link
@@ -955,7 +957,8 @@ async function handleTrialFlow(ctx, emailAddress) {
         await sendLinkBtn.hover();
         await page.waitForTimeout(500);
         await sendLinkBtn.click();
-        await page.waitForTimeout(3000); // Tunggu sebentar agar request selesai
+        await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+        await page.waitForTimeout(2000);
         flowSuccess = true;
         break;
       }
