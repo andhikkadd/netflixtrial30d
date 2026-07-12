@@ -797,15 +797,22 @@ async function handleTrialFlow(ctx, emailAddress) {
       await page.keyboard.press('Backspace');
       await page.waitForTimeout(200);
       await page.keyboard.type(emailAddress, { delay: 80 });
-      await page.waitForTimeout(500);
+      
+      // Tunggu 1.5 detik untuk melihat apakah React me-wipeout/reset inputnya
+      await page.waitForTimeout(1500);
 
       const val = await emailInput.inputValue();
       if (val === emailAddress) {
-        typedSuccessfully = true;
-        break;
-      } else {
-        await page.waitForTimeout(1000);
+        // Lakukan double check setelah 500ms untuk memastikan kestabilan
+        await page.waitForTimeout(500);
+        const valDoubleCheck = await emailInput.inputValue();
+        if (valDoubleCheck === emailAddress) {
+          typedSuccessfully = true;
+          break;
+        }
       }
+      
+      await page.waitForTimeout(1000);
     }
 
     if (!typedSuccessfully) {

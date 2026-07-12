@@ -263,17 +263,24 @@ async function run() {
         await page.keyboard.press('Backspace');
         await page.waitForTimeout(200);
         await page.keyboard.type(emailAddress, { delay: 80 });
-        await page.waitForTimeout(500);
+        
+        // Tunggu 1.5 detik untuk melihat apakah React me-wipeout/reset inputnya
+        await page.waitForTimeout(1500);
 
         const val = await emailInput.inputValue();
         if (val === emailAddress) {
-          typedSuccessfully = true;
-          console.log(`✔ Email berhasil terisi secara utuh (percobaan ${attempt})!`);
-          break;
-        } else {
-          console.log(`⚠️ Input kosong / terhapus oleh React (percobaan ${attempt}, isi: "${val}"). Mencoba ulang...`);
-          await page.waitForTimeout(1000);
+          // Lakukan double check setelah 500ms untuk memastikan kestabilan
+          await page.waitForTimeout(500);
+          const valDoubleCheck = await emailInput.inputValue();
+          if (valDoubleCheck === emailAddress) {
+            typedSuccessfully = true;
+            console.log(`✔ Email berhasil terisi secara utuh dan STABIL (percobaan ${attempt})!`);
+            break;
+          }
         }
+        
+        console.log(`⚠️ Input terhapus/berubah oleh React (percobaan ${attempt}, isi: "${val}"). Mencoba mengetik ulang...`);
+        await page.waitForTimeout(1000);
       }
 
       if (!typedSuccessfully) {
