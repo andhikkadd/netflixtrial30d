@@ -610,7 +610,10 @@ async function handleTrialFlow(ctx, emailAddress) {
       locale: 'id-ID',
       timezoneId: 'Asia/Jakarta',
       extraHTTPHeaders: {
-        'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7'
+        'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
+        'sec-ch-ua': '"Not-A.Brand";v="99", "Chromium";v="124", "Google Chrome";v="124"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"Windows"'
       }
     };
     if (isHeadless) {
@@ -619,10 +622,19 @@ async function handleTrialFlow(ctx, emailAddress) {
       contextOptions.viewport = null;
     }
 
+    // List GPU untuk rotasi fingerprint agar tidak terdeteksi cluster
+    const GPUs = [
+      { vendor: 'Google Inc. (NVIDIA)', renderer: 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Laptop GPU Direct3D11 vs_5_0 ps_5_0, D3D11)' },
+      { vendor: 'Google Inc. (NVIDIA)', renderer: 'ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU Direct3D11 vs_5_0 ps_5_0, D3D11)' },
+      { vendor: 'Google Inc. (Intel)', renderer: 'ANGLE (Intel, Intel(R) Iris(R) Xe Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)' },
+      { vendor: 'Google Inc. (NVIDIA)', renderer: 'ANGLE (NVIDIA, NVIDIA GeForce GTX 1650 Direct3D11 vs_5_0 ps_5_0, D3D11)' }
+    ];
+    const chosenGPU = GPUs[Math.floor(Math.random() * GPUs.length)];
+
     const context = await browser.newContext(contextOptions);
 
     // Stealth tingkat lanjut: Bypass Akamai Bot Manager (WebGL, Chrome APIs, Plugins, Webdriver)
-    await context.addInitScript(() => {
+    await context.addInitScript((gpu) => {
       // 1. Sembunyikan navigator.webdriver secara total dari prototype
       const newProto = Object.getPrototypeOf(navigator);
       delete newProto.webdriver;
@@ -669,19 +681,26 @@ async function handleTrialFlow(ctx, emailAddress) {
         }
       });
 
-      // 4. Mock WebGL & WebGL2 Renderer ke Kartu Grafis Asli (menghindari SwiftShader/VMware driver)
+      // 4. Mock WebGL & WebGL2 Renderer ke Kartu Grafis Asli dari list rotasi
       const getParameter = WebGLRenderingContext.prototype.getParameter;
       WebGLRenderingContext.prototype.getParameter = function (parameter) {
-        if (parameter === 37445) return 'Google Inc. (NVIDIA)';
-        if (parameter === 37446) return 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Laptop GPU Direct3D11 vs_5_0 ps_5_0, D3D11)';
+        if (parameter === 37445) return gpu.vendor;
+        if (parameter === 37446) return gpu.renderer;
         return getParameter.apply(this, arguments);
       };
       if (typeof WebGL2RenderingContext !== 'undefined') {
         const getParameter2 = WebGL2RenderingContext.prototype.getParameter;
         WebGL2RenderingContext.prototype.getParameter = function (parameter) {
-          if (parameter === 37445) return 'Google Inc. (NVIDIA)';
-          if (parameter === 37446) return 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Laptop GPU Direct3D11 vs_5_0 ps_5_0, D3D11)';
+          if (parameter === 37445) return gpu.vendor;
+          if (parameter === 37446) return gpu.renderer;
           return getParameter2.apply(this, arguments);
+        };
+      }
+
+      // Block WebRTC peer connection untuk menghindari kebocoran (leak) IP asli server
+      if (window.RTCPeerConnection) {
+        window.RTCPeerConnection = function() {
+          throw new Error('WebRTC is disabled.');
         };
       }
 
@@ -721,7 +740,7 @@ async function handleTrialFlow(ctx, emailAddress) {
         availWidth: { get: () => 1280 },
         availHeight: { get: () => 800 }
       });
-    });
+    }, chosenGPU);
 
     page = await context.newPage();
 
