@@ -872,9 +872,9 @@ async function handleTrialFlow(ctx, emailAddress) {
         page.waitForTimeout(15000).then(() => 'timeout')
       ]);
 
-      // Pengaman: Periksa innerText body halaman untuk memastikan apakah sudah sukses
-      const bodyText = await page.locator('body').innerText().catch(() => '');
-      if (bodyText.includes('Ketuk link dalam email') || bodyText.includes('Check your email') || bodyText.includes('link untuk membuat akunmu')) {
+            // Pengaman: Periksa innerText body halaman untuk memastikan apakah sudah sukses
+      const successCheckText = await page.locator('body').innerText().catch(() => '');
+      if (successCheckText.includes('Ketuk link dalam email') || successCheckText.includes('Check your email') || successCheckText.includes('link untuk membuat akunmu')) {
         flowSuccess = true;
         break;
       }
