@@ -945,6 +945,7 @@ bot.command('admin', (ctx) => {
 🔹 \`/genvoucher <kredit> <jumlah>\` - Buat voucher baru
 🔹 \`/addcredits <telegram_id> <kredit>\` - Tambah kredit ke user langsung
 🔹 \`/listvouchers\` - List voucher aktif belum terpakai
+🔹 \`/broadcast <pesan>\` atau \`/bc <pesan>\` - Broadcast pesan ke semua user
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 `;
   ctx.replyWithMarkdown(adminMessage);
@@ -994,7 +995,7 @@ bot.command('genvoucher', (ctx) => {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 🪙 Nilai Voucher: \`${credits} CR (Credit)\`
 📦 Jumlah Voucher: \`${count} Buah\`
-
+ 
 *Silakan salin kode voucher di bawah:*
 ${createdCodes.map(c => `🔑 \`${c}\` (\`${credits} CR\`)`).join('\n')}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1060,6 +1061,63 @@ bot.command('listvouchers', (ctx) => {
 ${activeVouchers.map(v => `🔑 \`${v.code}\` (\`${v.credits} CR\`)`).join('\n')}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 `);
+});
+
+// Admin: /broadcast ATAU /bc <pesan>
+bot.command(['broadcast', 'bc'], async (ctx) => {
+  if (!isAdmin(ctx)) {
+    return ctx.reply('❌ Anda tidak memiliki izin untuk menggunakan perintah ini!');
+  }
+
+  const text = ctx.message.text.trim();
+  const spaceIndex = text.indexOf(' ');
+
+  if (spaceIndex === -1) {
+    return ctx.replyWithMarkdown('⚠️ *Format salah!*\n\nGunakan perintah: `/broadcast <pesan>` atau `/bc <pesan>`\nContoh: `/bc Halo semuanya, stok saldo sudah diisi!`');
+  }
+
+  const messageText = text.substring(spaceIndex + 1).trim();
+  const users = db.prepare('SELECT id FROM users').all();
+
+  const statusMsg = await ctx.reply(`📣 Memulai pengiriman siaran (broadcast) ke ${users.length} pengguna...`);
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const user of users) {
+    try {
+      // Coba kirim format Markdown
+      await ctx.telegram.sendMessage(user.id, messageText, { parse_mode: 'Markdown' });
+      successCount++;
+    } catch (mdErr) {
+      try {
+        // Fallback: Kirim format HTML
+        await ctx.telegram.sendMessage(user.id, messageText, { parse_mode: 'HTML' });
+        successCount++;
+      } catch (htmlErr) {
+        try {
+          // Fallback: Kirim teks polos biasa
+          await ctx.telegram.sendMessage(user.id, messageText);
+          successCount++;
+        } catch (plainErr) {
+          failCount++;
+        }
+      }
+    }
+    // Delay 50ms untuk menghindari rate limit Telegram API
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+
+  // Update status akhir ke Admin
+  await ctx.telegram.editMessageText(
+    ctx.chat.id,
+    statusMsg.message_id,
+    null,
+    `📣 *SIARAN SELESAI!*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n✅ Sukses Terkirim: \`${successCount} user\`\n❌ Gagal (Blokir/Deaktif): \`${failCount} user\`\n━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    { parse_mode: 'Markdown' }
+  ).catch(() => {
+    ctx.replyWithMarkdown(`📣 *SIARAN SELESAI!*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n✅ Sukses Terkirim: \`${successCount} user\`\n❌ Gagal (Blokir/Deaktif): \`${failCount} user\`\n━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  });
 });
 
 // Daftarkan menu perintah (command list autocomplete)
