@@ -44,7 +44,34 @@ db.exec(`
     used_at TEXT,
     created_at TEXT
   );
+
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT
+  );
 `);
+
+// Initialize default settings
+db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)').run('maintenance', 'false');
+
+// Helper settings functions
+function getSetting(key) {
+  try {
+    const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
+    return row ? row.value : null;
+  } catch (err) {
+    console.error('Gagal mengambil setting:', err);
+    return null;
+  }
+}
+
+function setSetting(key, value) {
+  try {
+    db.prepare('INSERT INTO settings (key, value) ON CONFLICT(key) DO UPDATE SET value = ?').run(key, value.toString(), value.toString());
+  } catch (err) {
+    console.error('Gagal menyimpan setting:', err);
+  }
+}
 
 // Migration helper: Migrate JSON to SQLite on startup if old JSON files exist
 if (fs.existsSync(USERS_DB)) {
@@ -97,7 +124,7 @@ const failedAttempts = {};
 // User states for wizards/prompts
 const userStates = {};
 
-// Middleware to register users in DB when they interact
+// Middleware to register users in DB when they interact & handle maintenance mode
 bot.use((ctx, next) => {
   if (ctx.from) {
     const userId = ctx.from.id.toString();
@@ -112,6 +139,21 @@ bot.use((ctx, next) => {
       VALUES (?, ?, 0, ?)
       ON CONFLICT(id) DO UPDATE SET username = ?
     `).run(userId, username, new Date().toISOString(), username);
+
+    // Cek Mode Maintenance (kecuali untuk admin)
+    const isMaintenance = getSetting('maintenance') === 'true';
+    const isAdminUser = userId === config.adminId.toString();
+
+    if (isMaintenance && !isAdminUser) {
+      return ctx.replyWithMarkdown(`
+⚠️ *BOT MAINTENANCE* ⚠️
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+Maaf, bot saat ini sedang dalam pemeliharaan (maintenance) / pembaruan sistem oleh Admin.
+
+Silakan coba lagi beberapa saat lagi ya. Terima kasih!
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+`);
+    }
   }
   return next();
 });
@@ -122,8 +164,16 @@ bot.use((ctx, next) => {
     const text = ctx.message.text.trim();
     const userId = ctx.from.id.toString();
 
+    // Batalkan state jika user mengetik /cancel
+    if (text === '/cancel') {
+      if (userStates[userId]) {
+        delete userStates[userId];
+        return ctx.reply('❌ Perintah telah dibatalkan.');
+      }
+    }
+
     // Batalkan state jika user mengklik command atau tombol menu utama apa pun
-    if (text.startsWith('/') || ['🎬 Buat Akun Netflix', '🔑 Redeem Voucher', '🪙 Cek Kredit', 'ℹ️ Bantuan'].includes(text)) {
+    if (text.startsWith('/') || ['🎬 Buat Akun Netflix', '🔑 Redeem Voucher', '🪙 Cek Kredit', '🛒 Beli Kredit', 'ℹ️ Bantuan'].includes(text)) {
       delete userStates[userId];
       return next();
     }
@@ -149,6 +199,18 @@ Tolong kirim ulang email yang benar ya (contoh: \`emailkamu@gmail.com\`):
     if (userStates[userId] === 'WAITING_FOR_VOUCHER') {
       delete userStates[userId];
       return redeemCode(ctx, text);
+    }
+
+    // 3. Admin: Deteksi State Menunggu Pesan Broadcast
+    if (userStates[userId] === 'ADMIN_WAITING_FOR_BC') {
+      delete userStates[userId];
+      return handleAdminBroadcast(ctx, text);
+    }
+
+    // 4. Admin: Deteksi State Menunggu Nominal Bagi Kredit ke Semua
+    if (userStates[userId] === 'ADMIN_WAITING_FOR_GIVEALL') {
+      delete userStates[userId];
+      return handleAdminGiveAll(ctx, text);
     }
   }
   return next();
@@ -723,13 +785,19 @@ async function handleTrialFlow(ctx, emailAddress) {
     // Tunggu 3 detik untuk membiarkan halaman merespons / redirect
     await page.waitForTimeout(3000);
 
+    // Deteksi dini pemblokiran IP atau pengalihan ke halaman Login
+    const earlyUrl = page.url();
+    if (earlyUrl.includes('/login')) {
+      throw new Error('Email sudah terdaftar (dialihkan ke login) ATAU IP server diblokir oleh Netflix.');
+    }
+
     // Cek apakah ada banner error merah dari Netflix (indikasi cookies limit / diblokir)
     const errorBannerSelector = '.ui-message-error, [data-uia="text"], .message-container';
     const errorElements = page.locator(errorBannerSelector);
     const count = await errorElements.count();
     for (let i = 0; i < count; i++) {
       const text = await errorElements.nth(i).innerText();
-      if (text.includes('Terjadi kesalahan') || text.includes('error') || text.includes('maaf') || text.includes('Maaf')) {
+      if (text.includes('Terjadi kesalahan') || text.includes('error') || text.includes('maaf') || text.includes('Maaf') || text.includes('Something went wrong') || text.includes('try again in a few minutes')) {
         throw new Error(`Netflix Error: ${text.trim()}`);
       }
     }
@@ -744,11 +812,17 @@ async function handleTrialFlow(ctx, emailAddress) {
         await submitButton.click();
         await page.waitForTimeout(3000);
 
+        // Cek kembali setelah klik tombol fisik
+        const checkUrlPostClick = page.url();
+        if (checkUrlPostClick.includes('/login')) {
+          throw new Error('Email sudah terdaftar (dialihkan ke login) ATAU IP server diblokir oleh Netflix.');
+        }
+
         // Cek kembali error banner setelah klik tombol fisik
         const countAfterClick = await errorElements.count();
         for (let i = 0; i < countAfterClick; i++) {
           const text = await errorElements.nth(i).innerText();
-          if (text.includes('Terjadi kesalahan') || text.includes('error') || text.includes('maaf') || text.includes('Maaf')) {
+          if (text.includes('Terjadi kesalahan') || text.includes('error') || text.includes('maaf') || text.includes('Maaf') || text.includes('Something went wrong') || text.includes('try again in a few minutes')) {
             throw new Error(`Netflix Error: ${text.trim()}`);
           }
         }
@@ -777,6 +851,17 @@ async function handleTrialFlow(ctx, emailAddress) {
 
     for (let step = 1; step <= 4; step++) {
       await updateStatus(90);
+
+      // Cek status halaman saat ini di awal step
+      const stepUrl = page.url();
+      if (stepUrl.includes('/login')) {
+        throw new Error('Email sudah terdaftar (dialihkan ke login) ATAU IP server diblokir oleh Netflix.');
+      }
+
+      const bodyText = await page.locator('body').innerText().catch(() => '');
+      if (bodyText.includes('Something went wrong') || bodyText.includes('try again in a few minutes')) {
+        throw new Error('Terdeteksi bot/IP server diblokir oleh Netflix (Something went wrong).');
+      }
 
       // Tunggu salah satu dari keempat selector muncul (max 15 detik)
       const matchedSelector = await Promise.race([
@@ -922,34 +1007,193 @@ function isAdmin(ctx) {
   return ctx.from.id.toString() === config.adminId.toString();
 }
 
-// Admin Panel Dashboard
-bot.command('admin', (ctx) => {
-  if (!isAdmin(ctx)) return ctx.reply('❌ Anda tidak memiliki izin untuk menggunakan perintah ini!');
-
+// Admin Panel Helper Function
+function showAdminPanel(ctx, isEdit = false) {
   const totalUsers = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
   const totalVouchers = db.prepare('SELECT COUNT(*) as count FROM vouchers').get().count;
   const activeVouchers = db.prepare('SELECT COUNT(*) as count FROM vouchers WHERE used = 0').get().count;
   const usedVouchers = totalVouchers - activeVouchers;
+  const isMaint = getSetting('maintenance') === 'true';
 
   const adminMessage = `
-━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⚙️  *ADMIN CONTROL PANEL*  ⚙️
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 📊 *Statistik Bot:*
 👥 Total Pengguna: \`${totalUsers} orang\`
 🎫 Total Voucher Dibuat: \`${totalVouchers} buah\`
-🟢 Voucher Aktif (Belum Dipakai): \`${activeVouchers} buah\`
+🟢 Voucher Aktif: \`${activeVouchers} buah\`
 🔴 Voucher Terpakai: \`${usedVouchers} buah\`
 
-🛠️ *Perintah Kelola (Admin Only):*
-🔹 \`/genvoucher <kredit> <jumlah>\` - Buat voucher baru
-🔹 \`/addcredits <telegram_id> <kredit>\` - Tambah kredit ke user langsung
-🔹 \`/listvouchers\` - List voucher aktif belum terpakai
-🔹 \`/broadcast <pesan>\` atau \`/bc <pesan>\` - Broadcast pesan ke semua user
+🔧 *Status Maintenance:* ${isMaint ? '🟢 *AKTIF*' : '🔴 *NONAKTIF*'}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
+*Pilih tindakan di bawah ini:*
 `;
-  ctx.replyWithMarkdown(adminMessage);
+
+  const keyboard = Markup.inlineKeyboard([
+    [Markup.button.callback('📣 Broadcast Pesan', 'admin_broadcast')],
+    [Markup.button.callback('💸 Bagi Kredit ke Semua', 'admin_giveall')],
+    [Markup.button.callback(isMaint ? '🔴 Nonaktifkan Maintenance' : '🟢 Aktifkan Maintenance', 'admin_toggle_maintenance')],
+    [Markup.button.callback('🎫 List Voucher Aktif', 'admin_listvouchers')]
+  ]);
+
+  if (isEdit) {
+    return ctx.editMessageText(adminMessage, { parse_mode: 'Markdown', reply_markup: keyboard.reply_markup }).catch(() => {});
+  } else {
+    return ctx.replyWithMarkdown(adminMessage, keyboard);
+  }
+}
+
+// Admin Panel Dashboard Command
+bot.command('admin', (ctx) => {
+  if (!isAdmin(ctx)) return ctx.reply('❌ Anda tidak memiliki izin untuk menggunakan perintah ini!');
+  return showAdminPanel(ctx);
 });
+
+// Inline Action Handlers
+bot.action('admin_broadcast', (ctx) => {
+  if (!isAdmin(ctx)) return ctx.answerCbQuery('❌ Akses ditolak');
+  const userId = ctx.from.id.toString();
+  userStates[userId] = 'ADMIN_WAITING_FOR_BC';
+  ctx.replyWithMarkdown(`
+📣 *BROADCAST PESAN*
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+Silakan kirimkan pesan/teks yang ingin disebarkan ke semua pengguna bot.
+
+*Ketik /cancel untuk membatalkan.*
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+`);
+  ctx.answerCbQuery();
+});
+
+bot.action('admin_giveall', (ctx) => {
+  if (!isAdmin(ctx)) return ctx.answerCbQuery('❌ Akses ditolak');
+  const userId = ctx.from.id.toString();
+  userStates[userId] = 'ADMIN_WAITING_FOR_GIVEALL';
+  ctx.replyWithMarkdown(`
+💸 *BAGI KREDIT KE SEMUA*
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+Silakan kirimkan jumlah nominal kredit yang ingin dibagikan secara gratis ke SEMUA pengguna bot.
+Contoh: \`1\`
+
+*Ketik /cancel untuk membatalkan.*
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+`);
+  ctx.answerCbQuery();
+});
+
+bot.action('admin_toggle_maintenance', (ctx) => {
+  if (!isAdmin(ctx)) return ctx.answerCbQuery('❌ Akses ditolak');
+  const currentVal = getSetting('maintenance') === 'true';
+  const newVal = !currentVal;
+  setSetting('maintenance', newVal ? 'true' : 'false');
+  
+  ctx.answerCbQuery(`🔧 Maintenance: ${newVal ? 'AKTIF' : 'NONAKTIF'}`);
+  return showAdminPanel(ctx, true);
+});
+
+bot.action('admin_listvouchers', (ctx) => {
+  if (!isAdmin(ctx)) return ctx.answerCbQuery('❌ Akses ditolak');
+  ctx.answerCbQuery();
+  
+  const activeVouchers = db.prepare('SELECT code, credits FROM vouchers WHERE used = 0').all();
+  if (activeVouchers.length === 0) {
+    return ctx.reply('📭 Tidak ada voucher aktif yang belum terpakai.');
+  }
+
+  ctx.replyWithMarkdown(`
+🎁 *VOUCHER AKTIF BELUM TERPAKAI*
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+${activeVouchers.map(v => `🔑 \`${v.code}\` (\`${v.credits} CR\`)`).join('\n')}
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+`);
+});
+
+// Admin Helper Handler: Broadcast message
+async function handleAdminBroadcast(ctx, messageText) {
+  const users = db.prepare('SELECT id FROM users').all();
+  const statusMsg = await ctx.reply(`📣 Memulai pengiriman siaran (broadcast) ke ${users.length} pengguna...`);
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const user of users) {
+    try {
+      await ctx.telegram.sendMessage(user.id, messageText, { parse_mode: 'Markdown' });
+      successCount++;
+    } catch (mdErr) {
+      try {
+        await ctx.telegram.sendMessage(user.id, messageText, { parse_mode: 'HTML' });
+        successCount++;
+      } catch (htmlErr) {
+        try {
+          await ctx.telegram.sendMessage(user.id, messageText);
+          successCount++;
+        } catch (plainErr) {
+          failCount++;
+        }
+      }
+    }
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+
+  await ctx.telegram.editMessageText(
+    ctx.chat.id,
+    statusMsg.message_id,
+    null,
+    `📣 *SIARAN SELESAI!*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n✅ Sukses Terkirim: \`${successCount} user\`\n❌ Gagal (Blokir/Deaktif): \`${failCount} user\`\n━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    { parse_mode: 'Markdown' }
+  ).catch(() => {
+    ctx.replyWithMarkdown(`📣 *SIARAN SELESAI!*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n✅ Sukses Terkirim: \`${successCount} user\`\n❌ Gagal (Blokir/Deaktif): \`${failCount} user\`\n━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  });
+}
+
+// Admin Helper Handler: Give all users credits
+async function handleAdminGiveAll(ctx, text) {
+  const amount = parseInt(text);
+  if (isNaN(amount) || amount <= 0) {
+    return ctx.reply('❌ Jumlah kredit harus berupa angka positif!');
+  }
+
+  const users = db.prepare('SELECT id FROM users').all();
+  
+  // Update DB in transaction
+  const updateQuery = db.prepare('UPDATE users SET credits = credits + ?');
+  const transaction = db.transaction((amt) => {
+    updateQuery.run(amt);
+  });
+  transaction(amount);
+
+  const statusMsg = await ctx.reply(`💸 Membagikan +${amount} CR ke semua (${users.length}) pengguna...`);
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const user of users) {
+    try {
+      await ctx.telegram.sendMessage(user.id, `
+🎁 *Kado Spesial dari Admin!*
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+Anda mendapatkan bonus sebesar \`+${amount} CR\` gratis!
+💳 Cek saldo Anda sekarang menggunakan menu *🪙 Cek Kredit*.
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+`, { parse_mode: 'Markdown' });
+      successCount++;
+    } catch (err) {
+      failCount++;
+    }
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+
+  await ctx.telegram.editMessageText(
+    ctx.chat.id,
+    statusMsg.message_id,
+    null,
+    `💸 *PEMBAGIAN SELESAI!*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n✅ Berhasil Dikirim: \`${successCount} user\`\n❌ Gagal (Blokir/Deaktif): \`${failCount} user\`\n━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    { parse_mode: 'Markdown' }
+  ).catch(() => {
+    ctx.replyWithMarkdown(`💸 *PEMBAGIAN SELESAI!*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n✅ Berhasil Dikirim: \`${successCount} user\`\n❌ Gagal (Blokir/Deaktif): \`${failCount} user\`\n━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  });
+}
 
 // Admin: /genvoucher <kredit> <jumlah>
 bot.command('genvoucher', (ctx) => {
@@ -1061,63 +1305,6 @@ bot.command('listvouchers', (ctx) => {
 ${activeVouchers.map(v => `🔑 \`${v.code}\` (\`${v.credits} CR\`)`).join('\n')}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 `);
-});
-
-// Admin: /broadcast ATAU /bc <pesan>
-bot.command(['broadcast', 'bc'], async (ctx) => {
-  if (!isAdmin(ctx)) {
-    return ctx.reply('❌ Anda tidak memiliki izin untuk menggunakan perintah ini!');
-  }
-
-  const text = ctx.message.text.trim();
-  const spaceIndex = text.indexOf(' ');
-
-  if (spaceIndex === -1) {
-    return ctx.replyWithMarkdown('⚠️ *Format salah!*\n\nGunakan perintah: `/broadcast <pesan>` atau `/bc <pesan>`\nContoh: `/bc Halo semuanya, stok saldo sudah diisi!`');
-  }
-
-  const messageText = text.substring(spaceIndex + 1).trim();
-  const users = db.prepare('SELECT id FROM users').all();
-
-  const statusMsg = await ctx.reply(`📣 Memulai pengiriman siaran (broadcast) ke ${users.length} pengguna...`);
-
-  let successCount = 0;
-  let failCount = 0;
-
-  for (const user of users) {
-    try {
-      // Coba kirim format Markdown
-      await ctx.telegram.sendMessage(user.id, messageText, { parse_mode: 'Markdown' });
-      successCount++;
-    } catch (mdErr) {
-      try {
-        // Fallback: Kirim format HTML
-        await ctx.telegram.sendMessage(user.id, messageText, { parse_mode: 'HTML' });
-        successCount++;
-      } catch (htmlErr) {
-        try {
-          // Fallback: Kirim teks polos biasa
-          await ctx.telegram.sendMessage(user.id, messageText);
-          successCount++;
-        } catch (plainErr) {
-          failCount++;
-        }
-      }
-    }
-    // Delay 50ms untuk menghindari rate limit Telegram API
-    await new Promise(resolve => setTimeout(resolve, 50));
-  }
-
-  // Update status akhir ke Admin
-  await ctx.telegram.editMessageText(
-    ctx.chat.id,
-    statusMsg.message_id,
-    null,
-    `📣 *SIARAN SELESAI!*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n✅ Sukses Terkirim: \`${successCount} user\`\n❌ Gagal (Blokir/Deaktif): \`${failCount} user\`\n━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-    { parse_mode: 'Markdown' }
-  ).catch(() => {
-    ctx.replyWithMarkdown(`📣 *SIARAN SELESAI!*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n✅ Sukses Terkirim: \`${successCount} user\`\n❌ Gagal (Blokir/Deaktif): \`${failCount} user\`\n━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-  });
 });
 
 // Daftarkan menu perintah (command list autocomplete)
